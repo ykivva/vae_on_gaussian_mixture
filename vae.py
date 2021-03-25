@@ -113,7 +113,7 @@ class VAE_known(VAE):
         self.softmax = nn.Softmax()
         
         self.decoder_fc = nn.Linear(latent_dim, data_dim, bias=False)
-        self.variance = nn.Parameter(torch.ones(data_dim))
+        self.std = nn.Parameter(torch.ones(data_dim))
     
     def encoder(self, x):
         z = self.tanh(self.beta*self.encoder_fc(x))
@@ -121,7 +121,7 @@ class VAE_known(VAE):
     
     def decoder(self, z):
         mean = self.decoder_fc(z)
-        cov_mat = torch.diag(self.variance)
+        cov_mat = torch.diag(self.std**2)
         dist = MultivariateNormal(mean, cov_mat)
         return dist
 
