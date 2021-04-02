@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
 from torch.distributions.multivariate_normal import MultivariateNormal
+import pdb
 
 
 DEVICE = torch.device("cpu")
@@ -84,25 +85,62 @@ class VAE_vanilla(VAE):
         dist = MultivariateNormal(mean, cov_mat)
         return dist
     
+    def loss(self, x, L=10):
+        encoder_dist = self.encoder(x)
+        encoder_mean = encoder_dist.mean
+        encoder_var = encoder_dist.variance
+        loss = -(encoder_var-1).sum()
+        loss -= (encoder_mean**2).sum()
+        loss += torch.log(encoder_var).sum()
+        loss /= 2
+        
+        z_sample = encoder_dist.rsample((L,))
+        
+        decoder_dist = vae_model.decoder(z_sample)
+        log_likelihood = decoder_dist.log_prob(x)
+        loss += log_likelihood.sum()
+        return -loss
 
-def vae_vanilla_loss(x, vae_model, L=10):
-    encoder_dist = vae_model.encoder(x)
-    encoder_mean = encoder_dist.mean
-    encoder_var = encoder_dist.variance
-    loss = -(encoder_var - 1).sum()
-    loss -= (encoder_mean**2).sum()
-    loss += torch.log(encoder_var).sum()
-    loss /= 2
     
-    z_sample = encoder_dist.rsample((L,))
-    
-    decoder_dist = vae_model.decoder(z_sample)
-    log_likelihood = decoder_dist.log_prob(x)
-    loss += log_likelihood.sum()
-    return -loss
-
-
 class VAE_known(VAE):
+    def __init__(self, data_dim, latent_dim=2, d=1, beta=100., bias=False, std_grad=True):
+        super().__init__()
+        self.d = 1
+        self.beta = beta
+        self.bias = bias
+        
+        self.encoder_fc = nn.Linear(data_dim, latent_dim)
+        self.tanh = nn.Tanh()
+        self.softmax = nn.Softmax(dim=1)
+        
+        self.decoder_fc = nn.Linear(latent_dim, data_dim, bias=bias)
+        self.std = nn.Parameter(torch.ones(data_dim), requires_grad=std_grad)
+    
+    def encoder(self, x):
+        z = self.softmax(self.beta*self.encoder_fc(x))
+        return z
+    
+    def decoder(self, z):
+        mean = self.decoder_fc(z)
+        cov_mat = torch.diag(self.std**2)
+        dist = MultivariateNormal(mean, cov_mat)
+        return dist
+    
+    def loss(self, x, p_bernoulli=0.5, epsilon=1e-8):
+        z = self.encoder(x)
+        prior_true = torch.tensor([1-p_bernoulli, p_bernoulli])
+        loss = torch.xlogy(z, z+epsilon).sum()
+        loss -= torch.xlogy(z, prior_true).sum()
+        
+        decoder_dist0 = self.decoder(torch.tensor([1., 0.]))
+        decoder_dist1 = self.decoder(torch.tensor([0., 1.]))
+        log_likelihood0 = decoder_dist0.log_prob(x)
+        log_likelihood1 = decoder_dist1.log_prob(x)
+        log_likelihood = torch.vstack((log_likelihood0, log_likelihood1)).T
+        loss += (z * log_likelihood).sum()
+        return -loss
+
+class VAE_known_tanh(VAE):
     def __init__(self, data_dim, latent_dim=1, d=1, beta=100.):
         super().__init__()
         self.d = 1
@@ -124,14 +162,13 @@ class VAE_known(VAE):
         cov_mat = torch.diag(self.std**2)
         dist = MultivariateNormal(mean, cov_mat)
         return dist
-
-
-def vae_known_loss(x, vae_model, p_bernoulli=0.5):
-    z = vae_model.encoder(x)
-    loss = (1-z)/2 + z*p_bernoulli
-    loss = loss.sum()
     
-    decoder_dist = vae_model.decoder(z)
-    log_likelihood = decoder_dist.log_prob(x)
-    loss += log_likelihood.sum()
-    return -loss
+    def loss(self, x, p_bernoulli=0.5):
+        z = vae_model.encoder(x)
+        loss = (1-z)/2 + z*p_bernoulli
+        loss = loss.sum()
+
+        decoder_dist = vae_model.decoder(z)
+        log_likelihood = decoder_dist.log_prob(x)
+        loss += log_likelihood.sum()
+        return -loss

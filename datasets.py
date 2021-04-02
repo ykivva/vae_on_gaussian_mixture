@@ -15,12 +15,12 @@ from torchvision import transforms, utils
 class DataGenerator(IterableDataset):
     NUM_CENTROIDS = 2
     
-    def __init__(self, data_dim, max_iter, epsilon=0.01, d=1, v=None, p_bernoulli=0.5):
+    def __init__(self, data_dim, max_iter, std=0.01, d=1, v=None, p_bernoulli=0.5):
         super().__init__()
         self.data_dim = data_dim
         self.max_iter = max_iter
         self.d = d
-        self.epsilon = epsilon
+        self.std = std
         self.p_bernoulli = torch.tensor(p_bernoulli)
         self.v = v or torch.normal(0., 1., (2, data_dim))
     
@@ -41,18 +41,17 @@ class DataGenerator(IterableDataset):
                 y[0] = 1.
             else:
                 y[1] = 1.
-            yield y @ self.v/(self.d) + torch.normal(0, self.epsilon, (self.data_dim,))
+            yield y @ self.v/(self.d) + torch.normal(0, self.std, (self.data_dim,))
             
             
 class DataGeneratorSymmetric(IterableDataset):
-    NUM_CENTROIDS = 2
     
-    def __init__(self, data_dim, max_iter, epsilon=0.01, d=1, v=None, p_bernoulli=0.5):
+    def __init__(self, data_dim, max_iter, std=0.01, d=1, v=None, p_bernoulli=0.5):
         super().__init__()
         self.data_dim = data_dim
         self.max_iter = max_iter
         self.d = d
-        self.epsilon = epsilon
+        self.std = std
         self.p_bernoulli = torch.tensor(p_bernoulli)
         self.v = v or torch.normal(0., 1., (data_dim,))
     
@@ -72,7 +71,77 @@ class DataGeneratorSymmetric(IterableDataset):
                 y = 1.
             else:
                 y = -1.
-            yield y * self.v/(self.d) + torch.normal(0, self.epsilon, (self.data_dim,))
+            yield y * self.v/(self.d) + torch.normal(0, self.std, (self.data_dim,))
+            
+
+class DataGeneratorStatic(IterableDataset):
+    NUM_CENTROIDS = 2
+    
+    def __init__(self, data_dim, data_size, std=1, d=1, v=None, p_bernoulli=0.5, gen=None):
+        super().__init__()
+        self.data_dim = data_dim
+        self.data_size = data_size
+        self.std = std
+        self.d = d
+        self.p_bernoulli = torch.tensor(p_bernoulli)
+        self.v = v or torch.normal(0., 1., (self.NUM_CENTROIDS, data_dim))
+        self.data = []
+        gen = gen or self._generator
+        for data_sample in gen(data_size):
+            self.data.append(data_sample)
+    
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
+            worker_id = worker_info.id
+            iter_start = worker_id * per_worker
+            iter_end = min(iter_start+per_worker, self.data_size)
+        return iter(self.data[iter_start:iter_end])
+        
+        
+    def _generator(self, data_size):
+        for _ in range(data_size):
+            y = torch.zeros(2)
+            if torch.bernoulli(self.p_bernoulli)==1:
+                y[1] = 1.
+            else:
+                y[0] = 1.
+            yield y @ self.v/(self.d) + torch.normal(0, self.std, (self.data_dim,))
+    
+
+class DataGeneratorSymmetricStatic(IterableDataset):
+    
+    def __init__(self, data_dim, data_size, std=1, d=1, v=None, p_bernoulli=0.5, gen=None):
+        super().__init__()
+        self.data_dim = data_dim
+        self.data_size = data_size
+        self.std = std
+        self.d = d
+        self.p_bernoulli = torch.tensor(p_bernoulli)
+        self.v = v or torch.normal(0., 1., (data_dim, ))
+        self.data = []
+        gen = gen or self._generator
+        for data_sample in gen(data_size):
+            self.data.append(data_sample)
+    
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
+            worker_id = worker_info.id
+            iter_start = worker_id * per_worker
+            iter_end = min(iter_start+per_worker, self.data_size)
+        return iter(self.data[iter_start:iter_end])
+        
+        
+    def _generator(self, data_size):
+        for _ in range(data_size):
+            if torch.bernoulli(self.p_bernoulli)==1:
+                y = 1.
+            else:
+                y = -1.
+            yield y * self.v/(self.d) + torch.normal(0, self.std, (self.data_dim,))
             
             
 def generate_multiv_gauss(n_samples, mean, cov_mat):

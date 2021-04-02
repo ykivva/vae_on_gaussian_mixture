@@ -20,12 +20,13 @@ def elapsed(last_time=[time.time()]):
 
 class BaseLogger(object):
     
-    def __init__(self, name, verbose=True):
+    def __init__(self, name, verbose=True, max_capacity=int(1e5)):
         self.name = name
         self.data = {}
         self.running_data = {}
         self.reset_running = {}
         self.verbose = verbose
+        self.max_capacity = max_capacity
         self.hooks = []
         
     def add_hook(self, hook, feature='epoch', freq=1):
@@ -38,13 +39,18 @@ class BaseLogger(object):
             x = torch.tensor(x).data.cpu().numpy().mean()
             
         self.data[feature] = self.data.get(feature, [])
-        self.data[feature].append(x)
+        feature_capacity = len(self.data[feature])
+        if feature_capacity > self.max_capacity:
+            self.data[feature] = self.data[feature][:feature_capacity//2]
+            
         if feature not in self.running_data or self.reset_running.pop(feature, False):
             self.running_data[feature] = []
         self.running_data[feature].append(x)
         
         for hook, hook_feature, freq in self.hooks:
-            if feature == hook_feature and len(self.data[feature]) % freq == 0:
+            if feature == hook_feature and len(self.running_data[feature]) % freq == 0:
+                self.reset_running[feature] = True
+                self.data[feature].append(np.mean(self.running_data[feature]))
                 hook(self, self.data)
     
     def step(self):
