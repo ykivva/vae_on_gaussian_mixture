@@ -100,24 +100,75 @@ class VAE_vanilla(VAE):
         log_likelihood = decoder_dist.log_prob(x)
         loss += log_likelihood.sum()
         return -loss
+    
+
+class VAE_symmetric(VAE):
+    
+    def __init__(self, data_dim, latent_dim=1, bias_decoder=False, std_grad=False):
+        super().__init__()
+        self.bias_decoder = bias_decoder
+        
+        self.encoder_fc = nn.Linear(data_dim, latent_dim)
+        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
+        self.kl_div = nn.KLDivLoss(reduction='sum')
+        
+        self.decoder_fc = nn.Linear(latent_dim, data_dim, bias=bias_decoder)
+        self.std = nn.Parameter(torch.ones(data_dim), requires_grad=std_grad)
+    
+    def encoder(self, x):
+        z = self.sigmoid(self.encoder_fc(x))
+        return z
+    
+    def decoder(self, z):
+        mean = self.decoder_fc(z)
+        cov_mat = torch.diag(self.std**2)
+        dist = MultivariateNormal(mean, cov_mat)
+        return dist
+    
+    def loss(self, x, p_bernoulli=0.5, epsilon=1e-8):
+        z = self.encoder(x)
+        log_prior_true = torch.log(torch.tensor([1-p_bernoulli, p_bernoulli]))
+        prior_predicted = torch.hstack((1-z, z))
+        loss = -self.kl_div(input=log_prior_true, target=prior_predicted).sum()
+        
+        decoder_dist0 = self.decoder(-1*torch.ones_like(z))
+        decoder_dist1 = self.decoder(torch.ones_like(z))
+        log_likelihood0 = decoder_dist0.log_prob(x)
+        log_likelihood1 = decoder_dist1.log_prob(x)
+        log_likelihood = torch.vstack((log_likelihood0, log_likelihood1)).T
+        loss += (prior_predicted * log_likelihood).sum()
+        return -loss
+    
+    def sample(self, size=None, p_bernoulli=0.5):
+        if size is None:
+            z = torch.bernoulli(p_bernoulli)
+            z = z.reshape((1, 1))
+        else:
+            p_vec = torch.zeros(size) + p_bernoulli
+            z = torch.bernoulli(p_vec)
+            z = z.reshape((size, 1))
+        z[z==0] = -1
+        generation_dists = self.decoder(z)
+        generation_data = generation_dists.sample()
+        return generation_data
 
     
 class VAE_known(VAE):
-    def __init__(self, data_dim, latent_dim=2, d=1, beta=100., bias=False, std_grad=True):
+    
+    def __init__(self, data_dim, latent_dim=2, bias_decoder=False, std_grad=True):
         super().__init__()
-        self.d = 1
-        self.beta = beta
-        self.bias = bias
+        self.bias_decoder = bias_decoder
         
         self.encoder_fc = nn.Linear(data_dim, latent_dim)
         self.tanh = nn.Tanh()
         self.softmax = nn.Softmax(dim=1)
         
-        self.decoder_fc = nn.Linear(latent_dim, data_dim, bias=bias)
+        self.decoder_fc = nn.Linear(latent_dim, data_dim, bias=bias_decoder)
         self.std = nn.Parameter(torch.ones(data_dim), requires_grad=std_grad)
     
     def encoder(self, x):
-        z = self.softmax(self.beta*self.encoder_fc(x))
+        z = self.softmax(self.encoder_fc(x))
         return z
     
     def decoder(self, z):
@@ -129,8 +180,8 @@ class VAE_known(VAE):
     def loss(self, x, p_bernoulli=0.5, epsilon=1e-8):
         z = self.encoder(x)
         prior_true = torch.tensor([1-p_bernoulli, p_bernoulli])
-        loss = torch.xlogy(z, z+epsilon).sum()
-        loss -= torch.xlogy(z, prior_true).sum()
+        loss = -torch.xlogy(z, z+epsilon).sum()
+        loss += torch.xlogy(z, prior_true).sum()
         
         decoder_dist0 = self.decoder(torch.tensor([1., 0.]))
         decoder_dist1 = self.decoder(torch.tensor([0., 1.]))
@@ -141,10 +192,9 @@ class VAE_known(VAE):
         return -loss
 
 class VAE_known_tanh(VAE):
-    def __init__(self, data_dim, latent_dim=1, d=1, beta=100.):
+    
+    def __init__(self, data_dim, latent_dim=1):
         super().__init__()
-        self.d = 1
-        self.beta = beta
         
         self.encoder_fc = nn.Linear(data_dim, latent_dim)
         self.tanh = nn.Tanh()
@@ -154,7 +204,7 @@ class VAE_known_tanh(VAE):
         self.std = nn.Parameter(torch.ones(data_dim))
     
     def encoder(self, x):
-        z = self.tanh(self.beta*self.encoder_fc(x))
+        z = self.tanh(self.encoder_fc(x))
         return z
     
     def decoder(self, z):

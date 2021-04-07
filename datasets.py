@@ -15,10 +15,10 @@ from torchvision import transforms, utils
 class DataGenerator(IterableDataset):
     NUM_CENTROIDS = 2
     
-    def __init__(self, data_dim, max_iter, std=0.01, d=1, v=None, p_bernoulli=0.5):
+    def __init__(self, data_dim, data_size, std=0.01, d=1, v=None, p_bernoulli=0.5):
         super().__init__()
         self.data_dim = data_dim
-        self.max_iter = max_iter
+        self.data_size = data_size
         self.d = d
         self.std = std
         self.p_bernoulli = torch.tensor(p_bernoulli)
@@ -29,13 +29,13 @@ class DataGenerator(IterableDataset):
         worker_info = torch.utils.data.get_worker_info()
         gen = gen or self._generator
         if worker_info is not None:
-            per_worker = int(math.ceil(self.max_iter / float(worker_info.num_workers)))
+            per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
             worker_id = worker_info.id
-            worker_max_iter = min(self.max_iter - worker_id*per_worker, per_worker)
-        return gen(worker_max_iter)
+            worker_data_size = min(self.data_size - worker_id*per_worker, per_worker)
+        return gen(worker_data_size)
         
-    def _generator(self, max_iter):
-        for _ in range(max_iter):
+    def _generator(self, data_size):
+        for _ in range(data_size):
             y = torch.zeros(2)
             if torch.bernoulli(self.p_bernoulli)==1:
                 y[0] = 1.
@@ -46,10 +46,10 @@ class DataGenerator(IterableDataset):
             
 class DataGeneratorSymmetric(IterableDataset):
     
-    def __init__(self, data_dim, max_iter, std=0.01, d=1, v=None, p_bernoulli=0.5):
+    def __init__(self, data_dim, data_size, std=0.01, d=1, v=None, p_bernoulli=0.5):
         super().__init__()
         self.data_dim = data_dim
-        self.max_iter = max_iter
+        self.data_size = data_size
         self.d = d
         self.std = std
         self.p_bernoulli = torch.tensor(p_bernoulli)
@@ -60,13 +60,13 @@ class DataGeneratorSymmetric(IterableDataset):
         worker_info = torch.utils.data.get_worker_info()
         gen = gen or self._generator
         if worker_info is not None:
-            per_worker = int(math.ceil(self.max_iter / float(worker_info.num_workers)))
+            per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
             worker_id = worker_info.id
-            worker_max_iter = min(self.max_iter - worker_id*per_worker, per_worker)
-        return gen(worker_max_iter)
+            worker_data_size = min(self.data_size - worker_id*per_worker, per_worker)
+        return gen(worker_data_size)
         
-    def _generator(self, max_iter):
-        for _ in range(max_iter):
+    def _generator(self, data_size):
+        for _ in range(data_size):
             if torch.bernoulli(self.p_bernoulli)==1:
                 y = 1.
             else:
