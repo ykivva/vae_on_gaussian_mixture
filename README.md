@@ -16,4 +16,4 @@ To train a vae model you need to make the following steps:
    9.  ```d``` - rescale parameter for the gaussian mixture centroids
 2. Run the command:
  
-```python -m train --vae_model_name=<name_of_vae_model> --vae_dataset_name=<name_of_dataset> --train_config<name_of_train_config>```
+```python -m train --vae_model_name=<name_of_vae_model> --vae_dataset_name=<name_of_dataset> --train_config=<name_of_train_config>```
