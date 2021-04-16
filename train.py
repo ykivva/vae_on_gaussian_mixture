@@ -31,9 +31,10 @@ def main(
     data_dim = config.get('data_dim', 100)
     latent_dim = config.get('latent_dim', 1)
     std_grad = config.get("std_grad", True)
+    lr = config.get("lr", 3e-3)
     
     epochs_list = config.get('epochs', 50)
-    batch_size = config.get('batch_size', 32)
+    batch_size_ = config.get('batch_size', 32)
     alphas = config.get('alphas', [1])
     
     std = config.get('std', 1)
@@ -51,6 +52,7 @@ def main(
     for alpha, epochs in zip(alphas, epochs_list):
         wandb.init(project="vae_on_gaussian_mixture", group=train_config, reinit=True)
         data_size = int(data_dim * alpha)
+        batch_size = min(batch_size_, data_size)
         wandb.run.name = f"N:{data_dim};M:{data_size};alpha:{alpha}"
         
         model = model_class(data_dim=data_dim, latent_dim=latent_dim, std_grad=std_grad)
@@ -58,8 +60,8 @@ def main(
         dataset = dataclass(data_dim=data_dim, data_size=data_size,
                           std=std, d=d, p_bernoulli=p_bernoulli)
 
-        model.compile(torch.optim.Adam, lr=3e-3, weight_decay=2e-6, amsgrad=True)
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=2)
+        model.compile(torch.optim.Adam, lr=lr, amsgrad=True)
+        data_loader = DataLoader(dataset, batch_size=batch_size)
 
         for epoch in range(epochs):
             for data_batch in data_loader:
@@ -95,7 +97,8 @@ def main(
         predicted_centroid = model.decoder_fc.state_dict()['weight'].squeeze()
         target_centroid = dataset.v / dataset.d
         cos_dist = cos(predicted_centroid, target_centroid)
-        l2_dist = torch.linalg.norm(target_centroid-predicted_centroid)
+        l2_dist = min(torch.linalg.norm(target_centroid-predicted_centroid),
+                      torch.linalg.norm(target_centroid+predicted_centroid))
         
         cos_dist_table.append([alpha, abs(cos_dist)]) 
         l2_dist_table.append([alpha, l2_dist])
@@ -105,7 +108,7 @@ def main(
                    title="Cosine distance between centroids")})
         
         l2_table =  wandb.Table(data=l2_dist_table, columns = ["Alpha", "l2 distance"])
-        wandb.log({"l2 distance" : wandb.plot.line(cos_table, "Alpha", "l2 distance",
+        wandb.log({"l2 distance" : wandb.plot.line(l2_table, "Alpha", "l2 distance",
                    title="l2 distance between centroids")})
         
         wandb.finish()

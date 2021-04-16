@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib as mpl
 
 import os, sys, math, random, tarfile, glob, time, yaml, itertools
+import random
 import parse
 
 import torch
@@ -28,7 +29,10 @@ class DataGenerator(IterableDataset):
     def __iter__(self, gen=None):
         worker_info = torch.utils.data.get_worker_info()
         gen = gen or self._generator
-        if worker_info is not None:
+        if worker_info is None:
+            iter_start = 0
+            iter_end = self.data_size
+        else:
             per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
             worker_id = worker_info.id
             worker_data_size = min(self.data_size - worker_id*per_worker, per_worker)
@@ -59,7 +63,10 @@ class DataGeneratorSymmetric(IterableDataset):
     def __iter__(self, gen=None):
         worker_info = torch.utils.data.get_worker_info()
         gen = gen or self._generator
-        if worker_info is not None:
+        if worker_info is None:
+            iter_start = 0
+            iter_end = self.data_size
+        else:
             per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
             worker_id = worker_info.id
             worker_data_size = min(self.data_size - worker_id*per_worker, per_worker)
@@ -77,7 +84,11 @@ class DataGeneratorSymmetric(IterableDataset):
 class DataGeneratorStatic(IterableDataset):
     NUM_CENTROIDS = 2
     
-    def __init__(self, data_dim, data_size, std=1, d=1, v=None, p_bernoulli=0.5, gen=None):
+    def __init__(
+        self, data_dim, data_size,
+        std=1, d=1, v=None, p_bernoulli=0.5,
+        gen=None, shuffle=True
+    ):
         super().__init__()
         self.data_dim = data_dim
         self.data_size = data_size
@@ -85,6 +96,7 @@ class DataGeneratorStatic(IterableDataset):
         self.d = d
         self.p_bernoulli = torch.tensor(p_bernoulli)
         self.v = v or torch.normal(0., 1., (self.NUM_CENTROIDS, data_dim))
+        self.shuffle = shuffle
         self.data = []
         gen = gen or self._generator
         for data_sample in gen(data_size):
@@ -92,7 +104,12 @@ class DataGeneratorStatic(IterableDataset):
     
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
-        if worker_info is not None:
+        if self.shuffle:
+            random.shuffle(self.data)
+        if worker_info is None:
+            iter_start = 0
+            iter_end = self.data_size
+        else:
             per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
             worker_id = worker_info.id
             iter_start = worker_id * per_worker
@@ -112,7 +129,11 @@ class DataGeneratorStatic(IterableDataset):
 
 class DataGeneratorSymmetricStatic(IterableDataset):
     
-    def __init__(self, data_dim, data_size, std=1, d=1, v=None, p_bernoulli=0.5, gen=None):
+    def __init__(
+        self, data_dim, data_size, 
+        std=1, d=1, v=None, p_bernoulli=0.5,
+        gen=None, shuffle=True
+    ):
         super().__init__()
         self.data_dim = data_dim
         self.data_size = data_size
@@ -120,6 +141,7 @@ class DataGeneratorSymmetricStatic(IterableDataset):
         self.d = d
         self.p_bernoulli = torch.tensor(p_bernoulli)
         self.v = v or torch.normal(0., 1., (data_dim, ))
+        self.shuffle = shuffle
         self.data = []
         gen = gen or self._generator
         for data_sample in gen(data_size):
@@ -127,7 +149,12 @@ class DataGeneratorSymmetricStatic(IterableDataset):
     
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
-        if worker_info is not None:
+        if self.shuffle:
+            random.shuffle(self.data)
+        if worker_info is None:
+            iter_start = 0
+            iter_end = self.data_size
+        else:
             per_worker = int(math.ceil(self.data_size / float(worker_info.num_workers)))
             worker_id = worker_info.id
             iter_start = worker_id * per_worker
