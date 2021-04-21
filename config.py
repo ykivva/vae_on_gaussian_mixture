@@ -6,6 +6,43 @@ from datasets import DataGeneratorStatic, DataGeneratorSymmetricStatic
 
 MAX_ITER = 2000
 
+
+def get_num_epochs(max_iter, data_dim, alphas, batch_size):
+    data_sizes = (data_dim * alphas).astype(int)
+    data_sizes = (data_sizes + batch_size -  1) // batch_size
+    num_epochs = max_iter // data_sizes
+    num_epochs[num_epochs<1] = 1
+    return num_epochs
+
+
+def generate_train_config(
+    data_dim=1024, latent_dim=1,
+    max_iter = 2000,
+    std_grad=False, lr=1e-3,
+    epochs=None, batch_size=64,
+    alphas=np.array([3, 4, 5]), std=1,
+    p_bernoulli=0.5, d=None
+):
+    if d is None: 
+        d=data_dim**(1/2)
+    if epochs is None:
+        epochs = get_num_epochs(max_iter, data_dim, alphas, batch_size)
+    
+    config = {
+        "data_dim": data_dim,
+        "latent_dim": latent_dim,
+        "std_grad": std_grad,
+        "lr": lr,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "alphas": alphas,
+        "std": std,
+        "p_bernoulli": p_bernoulli,
+        "d": d,
+    }
+    return config
+
+
 vae_config = {
     "models": {
         "VAE_symmetric": VAE_symmetric,
@@ -199,6 +236,110 @@ vae_config = {
             "epochs": 100 // (((256*np.linspace(1, 12, num=100)).astype(int)+31) // 32) + 1,
             "batch_size": 32,
             "alphas": np.linspace(1, 12, num=100),
+            "std": 1,
+            "p_bernoulli": 0.5,
+            "d": 32,
+        },
+        
+        "experiment16": {
+            "data_dim": 1024,
+            "latent_dim": 1,
+            "std_grad": False,
+            "lr": 1e-3,
+            "epochs": 5000 // (((1024*np.linspace(1, 30, num=200)).astype(int)+63) // 64) + 1,
+            "batch_size": 64,
+            "alphas": np.linspace(1, 30, num=200),
+            "std": 1,
+            "p_bernoulli": 0.5,
+            "d": 32,
+        },
+        
+        "experiment17": {
+            "data_dim": 1024,
+            "latent_dim": 1,
+            "std_grad": False,
+            "lr": 3e-4,
+            "epochs": 8000 // (((1024*np.linspace(10, 30, num=200)).astype(int)+127) // 128) + 1,
+            "batch_size": 128,
+            "alphas": np.linspace(10, 30, num=200),
+            "std": 1,
+            "p_bernoulli": 0.5,
+            "d": 32,
+        },
+        
+        "experiment18": generate_train_config(
+            data_dim=1024,
+            latent_dim=1,
+            std_grad=False,
+            max_iter=4500,
+            lr=3e-3,
+            epochs=None,
+            batch_size=512,
+            alphas=np.linspace(1, 10, num=100),
+            std=1,
+            p_bernoulli=0.5
+        ),
+        
+        "experiment19": generate_train_config(
+            data_dim=2048,
+            latent_dim=1,
+            std_grad=False,
+            max_iter=4500,
+            lr=3e-3,
+            epochs=None,
+            batch_size=512,
+            alphas=np.linspace(1, 10, num=100),
+            std=1,
+            p_bernoulli=0.5
+        ),
+        
+        "experiment20": generate_train_config(
+            data_dim=512,
+            latent_dim=1,
+            std_grad=False,
+            max_iter=4500,
+            lr=3e-3,
+            epochs=None,
+            batch_size=512,
+            alphas=np.linspace(1, 10, num=100),
+            std=1,
+            p_bernoulli=0.5
+        ),
+        
+        "experiment21": generate_train_config(
+            data_dim=256,
+            latent_dim=1,
+            std_grad=False,
+            max_iter=4500,
+            lr=3e-3,
+            epochs=None,
+            batch_size=256,
+            alphas=np.linspace(1, 10, num=100),
+            std=1,
+            p_bernoulli=0.5
+        ),
+        
+        "experiment22": generate_train_config(
+            data_dim=128,
+            latent_dim=1,
+            std_grad=False,
+            max_iter=4500,
+            lr=3e-3,
+            epochs=None,
+            batch_size=128,
+            alphas=np.linspace(1, 10, num=100),
+            std=1,
+            p_bernoulli=0.5
+        ),
+        
+        "alpha: 30": {
+            "data_dim": 1024,
+            "latent_dim": 1,
+            "std_grad": False,
+            "lr": 3e-4,
+            "epochs": [3],
+            "batch_size": 512,
+            "alphas": [30],
             "std": 1,
             "p_bernoulli": 0.5,
             "d": 32,

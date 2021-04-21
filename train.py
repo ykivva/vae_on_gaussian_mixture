@@ -14,14 +14,16 @@ from torch.utils.data import DataLoader
 import wandb
 
 from config import vae_config
+from utils import elapsed
 
 import pdb
 
 
-def main(
+def train(
     vae_model_name="VAE_symmetric",
     vae_dataset_name="SymmetricStatic",
-    train_config="test_config"
+    train_config="test_config",
+    lr_decay=False
 ):
     
     model_class = vae_config["models"][vae_model_name]
@@ -60,14 +62,22 @@ def main(
         dataset = dataclass(data_dim=data_dim, data_size=data_size,
                           std=std, d=d, p_bernoulli=p_bernoulli)
 
-        model.compile(torch.optim.Adam, lr=lr, amsgrad=True)
+        cur_lr = lr
+        model.compile(torch.optim.Adam, lr=cur_lr, amsgrad=True)
         data_loader = DataLoader(dataset, batch_size=batch_size)
-
+        
+        cur_iter = 0
         for epoch in range(epochs):
             for data_batch in data_loader:
                 loss = model.loss(data_batch)
                 model.step(loss)
                 wandb.log({"loss":loss})
+                cur_iter += 1
+                if lr_decay and cur_iter>1500:
+                    cur_iter=0
+                    cur_lr /= 3
+                    model.compile(torch.optim.Adam, lr=cur_lr, amsgrad=True)
+        
         
         real_data = np.array([x.numpy() for x in dataset.data])
         num_choices = min(len(real_data), num_vis_dots)
@@ -113,6 +123,5 @@ def main(
         
         wandb.finish()
 
-
 if __name__=="__main__":
-    fire.Fire(main)
+    fire.Fire(train)

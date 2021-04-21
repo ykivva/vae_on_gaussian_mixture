@@ -1,5 +1,5 @@
 import sys
-import os
+import os, time
 import math
 import random
 
@@ -11,6 +11,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
 from torch.distributions.multivariate_normal import MultivariateNormal
+from torch.distributions.normal import Normal
+
+from utils import elapsed
 import pdb
 
 
@@ -122,8 +125,8 @@ class VAE_symmetric(VAE):
     
     def decoder(self, z):
         mean = self.decoder_fc(z)
-        cov_mat = torch.diag(self.std**2)
-        dist = MultivariateNormal(mean, cov_mat)
+        variance = self.std**2
+        dist = Normal(mean, variance)
         return dist
     
     def loss(self, x, p_bernoulli=0.5, epsilon=1e-8):
@@ -134,8 +137,8 @@ class VAE_symmetric(VAE):
         
         decoder_dist0 = self.decoder(-1*torch.ones_like(z))
         decoder_dist1 = self.decoder(torch.ones_like(z))
-        log_likelihood0 = decoder_dist0.log_prob(x)
-        log_likelihood1 = decoder_dist1.log_prob(x)
+        log_likelihood0 = decoder_dist0.log_prob(x).sum(dim=1)
+        log_likelihood1 = decoder_dist1.log_prob(x).sum(dim=1)
         log_likelihood = torch.vstack((log_likelihood0, log_likelihood1)).T
         loss += (prior_predicted * log_likelihood).sum()
         return -loss

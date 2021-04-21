@@ -39,7 +39,7 @@ class DataGenerator(IterableDataset):
         return gen(worker_data_size)
         
     def _generator(self, data_size):
-        for _ in range(data_size):
+        for _ in range(data_size): 
             y = torch.zeros(2)
             if torch.bernoulli(self.p_bernoulli)==1:
                 y[0] = 1.

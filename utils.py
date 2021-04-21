@@ -18,3 +18,11 @@ def visualize_distributions(data2vis, labels, colors=[], alpha=0.1):
                     alpha=0.1)
 
     plt.show()
+    
+
+def elapsed(last_time=[time.time()]):
+    """ Returns the time passed since elapsed() was last called. """
+    current_time = time.time()
+    diff = current_time - last_time[0]
+    last_time[0] = current_time
+    return diff
