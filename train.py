@@ -26,22 +26,22 @@ def train(
     lr_decay=False
 ):
     
-    model_class = vae_config["models"][vae_model_name]
-    dataclass = vae_config["datasets"][vae_dataset_name]
-    config = vae_config["train_configs"][train_config]
+    model_class = config.models[vae_model_name]
+    dataclass = config.datasets[vae_dataset_name]
+    train_config = vae_config["train"][train_config]
     
-    data_dim = config.get('data_dim', 100)
-    latent_dim = config.get('latent_dim', 1)
-    std_grad = config.get("std_grad", True)
-    lr = config.get("lr", 3e-3)
+    data_dim = train_config.get('data_dim', 100)
+    latent_dim = train_config.get('latent_dim', 1)
+    std_grad = train_config.get("std_grad", True)
+    lr = train_config.get("lr", 3e-3)
     
-    epochs_list = config.get('epochs', 50)
-    batch_size_ = config.get('batch_size', 32)
-    alphas = config.get('alphas', [1])
+    epochs_list = train_config.get('epochs', 50)
+    batch_size_ = train_config.get('batch_size', 32)
+    alphas = train_config.get('alphas', [1])
     
-    std = config.get('std', 1)
-    p_bernoulli = config.get('p_bernoulli', 0.5)
-    d = config.get('d', 1)
+    std = train_config.get('std', 1)
+    p = train_config.get('p', 0.5)
+    d = train_config.get('d', 1)
     num_vis_dots = 100
     
     
@@ -60,7 +60,7 @@ def train(
         model = model_class(data_dim=data_dim, latent_dim=latent_dim, std_grad=std_grad)
         
         dataset = dataclass(data_dim=data_dim, data_size=data_size,
-                          std=std, d=d, p_bernoulli=p_bernoulli)
+                          std=std, d=d, p=p)
 
         cur_lr = lr
         model.compile(torch.optim.Adam, lr=cur_lr, amsgrad=True)

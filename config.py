@@ -15,13 +15,13 @@ def get_num_epochs(max_iter, data_dim, alphas, batch_size):
     return num_epochs
 
 
-def generate_train_config(
+def generate_vae_config(
     data_dim=1024, latent_dim=1,
     max_iter = 2000,
     std_grad=False, lr=1e-3,
     epochs=None, batch_size=64,
     alphas=np.array([3, 4, 5]), std=1,
-    p_bernoulli=0.5, d=None
+    p=0.5, d=None
 ):
     if d is None: 
         d=data_dim**(1/2)
@@ -37,22 +37,54 @@ def generate_train_config(
         "batch_size": batch_size,
         "alphas": alphas,
         "std": std,
-        "p_bernoulli": p_bernoulli,
+        "p": p,
         "d": d,
     }
     return config
 
 
-vae_config = {
-    "models": {
+def generate_bayes_config(
+    data_dim=100, p=0.5,
+    alphas=[1], lambda_=1,
+    max_iter=1000, eps=1e-4, std=1
+):
+    config = {
+        "data_dim": data_dim, 
+        "p": p,
+        "alphas": alphas,
+        "lambda": lambda_,
+        "max_iter": max_iter,
+        "eps": eps,
+        "std": std,
+    }
+    return config
+
+
+# Dictionary with possible models for VAE
+models = {
         "VAE_symmetric": VAE_symmetric,
-    },
-    
-    "datasets": {
+    }
+
+# Dictionary with datasets
+datasets = {
         "SymmetricStatic": DataGeneratorSymmetricStatic,
-    },
-    
-    "train_configs": {
+    }
+
+bayes_configs = {
+    "test": generate_bayes_config(
+        data_dim=1000,
+        p=0.5,
+        alphas=[1],
+        lambda_=0.9,
+        max_iter=10000,
+        eps=1e-7,
+        std=1
+    ),
+}
+        
+
+vae_config = {
+    "train": {
         "test_config": {
             "data_dim": 100,
             "latent_dim": 1,
@@ -61,7 +93,7 @@ vae_config = {
             "batch_size": 32,
             "alphas": [0.5, 1, 2, 5],
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 1,
         },
         
@@ -73,7 +105,7 @@ vae_config = {
             "batch_size": 32,
             "alphas": np.linspace(0.1, 20, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 1,
         },
         
@@ -85,7 +117,7 @@ vae_config = {
             "batch_size": 32,
             "alphas": np.linspace(0.1, 1, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 1,
         },
         
@@ -97,7 +129,7 @@ vae_config = {
             "batch_size": 8,
             "alphas": np.linspace(0.01, 1, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 1,
         },
         
@@ -109,7 +141,7 @@ vae_config = {
             "batch_size": 1,
             "alphas": np.linspace(0.001, 0.05, num=50),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 1,
         },
         
@@ -121,7 +153,7 @@ vae_config = {
             "batch_size": 8,
             "alphas": np.linspace(0.1, 5, num=50),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 10,
         },
         
@@ -134,7 +166,7 @@ vae_config = {
             "batch_size": 1,
             "alphas": np.linspace(0.01, 10, num=1000),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 10,
         },
         
@@ -147,7 +179,7 @@ vae_config = {
             "batch_size": 8,
             "alphas": np.linspace(0.5, 30, num=1000),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 10,
         },
         
@@ -160,7 +192,7 @@ vae_config = {
             "batch_size": 64,
             "alphas": np.linspace(1, 100, num=200),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 10,
         },
         
@@ -173,7 +205,7 @@ vae_config = {
             "batch_size": 64,
             "alphas": np.linspace(0.1, 4, num=200),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 10,
         },
         
@@ -186,7 +218,7 @@ vae_config = {
             "batch_size": 16,
             "alphas": np.linspace(0.02, 4, num=200),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 7,
         },
         "experiment12": {
@@ -198,7 +230,7 @@ vae_config = {
             "batch_size": 16,
             "alphas": np.linspace(3.5, 7, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 7,
         },
         
@@ -211,7 +243,7 @@ vae_config = {
             "batch_size": 64,
             "alphas": np.linspace(4, 12, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 7,
         },
         
@@ -224,7 +256,7 @@ vae_config = {
             "batch_size": 32,
             "alphas": np.linspace(1, 12, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 16,
         },
         
@@ -237,7 +269,7 @@ vae_config = {
             "batch_size": 32,
             "alphas": np.linspace(1, 12, num=100),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 32,
         },
         
@@ -250,7 +282,7 @@ vae_config = {
             "batch_size": 64,
             "alphas": np.linspace(1, 30, num=200),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 32,
         },
         
@@ -263,11 +295,11 @@ vae_config = {
             "batch_size": 128,
             "alphas": np.linspace(10, 30, num=200),
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 32,
         },
         
-        "experiment18": generate_train_config(
+        "experiment18": generate_vae_config(
             data_dim=1024,
             latent_dim=1,
             std_grad=False,
@@ -277,10 +309,10 @@ vae_config = {
             batch_size=512,
             alphas=np.linspace(1, 10, num=100),
             std=1,
-            p_bernoulli=0.5
+            p=0.5
         ),
         
-        "experiment19": generate_train_config(
+        "experiment19": generate_vae_config(
             data_dim=2048,
             latent_dim=1,
             std_grad=False,
@@ -290,10 +322,10 @@ vae_config = {
             batch_size=512,
             alphas=np.linspace(1, 10, num=100),
             std=1,
-            p_bernoulli=0.5
+            p=0.5
         ),
         
-        "experiment20": generate_train_config(
+        "experiment20": generate_vae_config(
             data_dim=512,
             latent_dim=1,
             std_grad=False,
@@ -303,10 +335,10 @@ vae_config = {
             batch_size=512,
             alphas=np.linspace(1, 10, num=100),
             std=1,
-            p_bernoulli=0.5
+            p=0.5
         ),
         
-        "experiment21": generate_train_config(
+        "experiment21": generate_vae_config(
             data_dim=256,
             latent_dim=1,
             std_grad=False,
@@ -316,10 +348,10 @@ vae_config = {
             batch_size=256,
             alphas=np.linspace(1, 10, num=100),
             std=1,
-            p_bernoulli=0.5
+            p=0.5
         ),
         
-        "experiment22": generate_train_config(
+        "experiment22": generate_vae_config(
             data_dim=128,
             latent_dim=1,
             std_grad=False,
@@ -329,7 +361,7 @@ vae_config = {
             batch_size=128,
             alphas=np.linspace(1, 10, num=100),
             std=1,
-            p_bernoulli=0.5
+            p=0.5
         ),
         
         "alpha: 30": {
@@ -341,7 +373,7 @@ vae_config = {
             "batch_size": 512,
             "alphas": [30],
             "std": 1,
-            "p_bernoulli": 0.5,
+            "p": 0.5,
             "d": 32,
         },
     },
