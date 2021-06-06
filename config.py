@@ -21,7 +21,7 @@ def generate_vae_config(
     std_grad=False, lr=1e-3,
     epochs=None, batch_size=64,
     alphas=np.array([3, 4, 5]), std=1,
-    p=0.5, d=None
+    p=0.5, d=None, seeds=[13]
 ):
     if d is None: 
         d=data_dim**(1/2)
@@ -39,6 +39,7 @@ def generate_vae_config(
         "std": std,
         "p": p,
         "d": d,
+        "seeds": seeds,
     }
     return config
 
@@ -46,7 +47,8 @@ def generate_vae_config(
 def generate_bayes_config(
     data_dim=100, p=0.5,
     alphas=[1], lambda_=1,
-    max_iter=1000, eps=1e-4, std=1
+    max_iter=1000, eps=1e-4, 
+    std=1, seeds=[13]
 ):
     config = {
         "data_dim": data_dim, 
@@ -56,6 +58,7 @@ def generate_bayes_config(
         "max_iter": max_iter,
         "eps": eps,
         "std": std,
+        "seeds": seeds,
     }
     return config
 
@@ -71,310 +74,31 @@ datasets = {
     }
 
 bayes_configs = {
-    "test": generate_bayes_config(
-        data_dim=1000,
+    "bayes.v1": generate_bayes_config(
+        data_dim=1024,
         p=0.5,
-        alphas=[1],
-        lambda_=0.9,
-        max_iter=10000,
-        eps=1e-7,
-        std=1
+        alphas=np.linspace(1, 10, num=100),
+        lambda_=0.95,
+        max_iter=2000,
+        eps=1e-6,
+        std=1,
+        seeds=[13, 26, 39, 666, 777, 1313, 2021, 6666, 7777, 9999]
     ),
 }
         
 
-vae_config = {
-    "train": {
-        "test_config": {
-            "data_dim": 100,
-            "latent_dim": 1,
-            "std_grad": False,
-            "epochs": 100,
-            "batch_size": 32,
-            "alphas": [0.5, 1, 2, 5],
-            "std": 1,
-            "p": 0.5,
-            "d": 1,
-        },
-        
-        "experiment1": {
-            "data_dim": 500,
-            "latent_dim": 1,
-            "std_grad": False,
-            "epochs": MAX_ITER // (((31+500*np.linspace(0.1, 20, num=100)).astype(int)) // 32),
-            "batch_size": 32,
-            "alphas": np.linspace(0.1, 20, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 1,
-        },
-        
-        "experiment2": {
-            "data_dim": 1000,
-            "latent_dim": 1,
-            "std_grad": False,
-            "epochs": MAX_ITER // (((31+1000*np.linspace(0.1, 1, num=100)).astype(int)) // 32),
-            "batch_size": 32,
-            "alphas": np.linspace(0.1, 1, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 1,
-        },
-        
-        "experiment3": {
-            "data_dim": 1000,
-            "latent_dim": 1,
-            "std_grad": False,
-            "epochs": MAX_ITER // (((7+1000*np.linspace(0.01, 1, num=100)).astype(int)) // 8),
-            "batch_size": 8,
-            "alphas": np.linspace(0.01, 1, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 1,
-        },
-        
-        "experiment4": {
-            "data_dim": 1000,
-            "latent_dim": 1,
-            "std_grad": False,
-            "epochs": MAX_ITER // (((1000*np.linspace(0.001, 0.05, num=50)).astype(int)) // 1),
-            "batch_size": 1,
-            "alphas": np.linspace(0.001, 0.05, num=50),
-            "std": 1,
-            "p": 0.5,
-            "d": 1,
-        },
-        
-        "experiment5": {
-            "data_dim": 100,
-            "latent_dim": 1,
-            "std_grad": False,
-            "epochs": MAX_ITER // (((100*np.linspace(0.1, 5, num=50)).astype(int)+7) // 8),
-            "batch_size": 8,
-            "alphas": np.linspace(0.1, 5, num=50),
-            "std": 1,
-            "p": 0.5,
-            "d": 10,
-        },
-        
-        "experiment6": {
-            "data_dim": 100,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-4,
-            "epochs": 10000 // (((100*np.linspace(0.01, 10, num=1000)).astype(int)+0) // 1),
-            "batch_size": 1,
-            "alphas": np.linspace(0.01, 10, num=1000),
-            "std": 1,
-            "p": 0.5,
-            "d": 10,
-        },
-        
-        "experiment7": {
-            "data_dim": 100,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-4,
-            "epochs": 10000 // (((100*np.linspace(0.5, 30, num=1000)).astype(int)+7) // 8),
-            "batch_size": 8,
-            "alphas": np.linspace(0.5, 30, num=1000),
-            "std": 1,
-            "p": 0.5,
-            "d": 10,
-        },
-        
-        "experiment8": {
-            "data_dim": 100,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-3,
-            "epochs": 5000 // (((100*np.linspace(1, 100, num=200)).astype(int)+63) // 64),
-            "batch_size": 64,
-            "alphas": np.linspace(1, 100, num=200),
-            "std": 1,
-            "p": 0.5,
-            "d": 10,
-        },
-        
-        "experiment9": {
-            "data_dim": 100,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-3,
-            "epochs": 5000 // (((100*np.linspace(0.1, 4, num=200)).astype(int)+63) // 64),
-            "batch_size": 64,
-            "alphas": np.linspace(0.1, 4, num=200),
-            "std": 1,
-            "p": 0.5,
-            "d": 10,
-        },
-        
-        "experiment11": {
-            "data_dim": 50,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-3,
-            "epochs": 2000 // (((50*np.linspace(0.02, 4, num=200)).astype(int)+15) // 16) + 1,
-            "batch_size": 16,
-            "alphas": np.linspace(0.02, 4, num=200),
-            "std": 1,
-            "p": 0.5,
-            "d": 7,
-        },
-        "experiment12": {
-            "data_dim": 50,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-3,
-            "epochs": 2000 // (((50*np.linspace(3.5, 7, num=100)).astype(int)+15) // 16) + 1,
-            "batch_size": 16,
-            "alphas": np.linspace(3.5, 7, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 7,
-        },
-        
-        "experiment13": {
-            "data_dim": 50,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-3,
-            "epochs": 2000 // (((50*np.linspace(4, 12, num=100)).astype(int)+63) // 64) + 1,
-            "batch_size": 64,
-            "alphas": np.linspace(4, 12, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 7,
-        },
-        
-        "experiment14": {
-            "data_dim": 256,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-3,
-            "epochs": 10000 // (((256*np.linspace(1, 12, num=100)).astype(int)+31) // 32) + 1,
-            "batch_size": 32,
-            "alphas": np.linspace(1, 12, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 16,
-        },
-        
-        "experiment15": {
-            "data_dim": 1024,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 1e-3,
-            "epochs": 100 // (((256*np.linspace(1, 12, num=100)).astype(int)+31) // 32) + 1,
-            "batch_size": 32,
-            "alphas": np.linspace(1, 12, num=100),
-            "std": 1,
-            "p": 0.5,
-            "d": 32,
-        },
-        
-        "experiment16": {
-            "data_dim": 1024,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 1e-3,
-            "epochs": 5000 // (((1024*np.linspace(1, 30, num=200)).astype(int)+63) // 64) + 1,
-            "batch_size": 64,
-            "alphas": np.linspace(1, 30, num=200),
-            "std": 1,
-            "p": 0.5,
-            "d": 32,
-        },
-        
-        "experiment17": {
-            "data_dim": 1024,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-4,
-            "epochs": 8000 // (((1024*np.linspace(10, 30, num=200)).astype(int)+127) // 128) + 1,
-            "batch_size": 128,
-            "alphas": np.linspace(10, 30, num=200),
-            "std": 1,
-            "p": 0.5,
-            "d": 32,
-        },
-        
-        "experiment18": generate_vae_config(
-            data_dim=1024,
-            latent_dim=1,
-            std_grad=False,
-            max_iter=4500,
-            lr=3e-3,
-            epochs=None,
-            batch_size=512,
-            alphas=np.linspace(1, 10, num=100),
-            std=1,
-            p=0.5
-        ),
-        
-        "experiment19": generate_vae_config(
-            data_dim=2048,
-            latent_dim=1,
-            std_grad=False,
-            max_iter=4500,
-            lr=3e-3,
-            epochs=None,
-            batch_size=512,
-            alphas=np.linspace(1, 10, num=100),
-            std=1,
-            p=0.5
-        ),
-        
-        "experiment20": generate_vae_config(
-            data_dim=512,
-            latent_dim=1,
-            std_grad=False,
-            max_iter=4500,
-            lr=3e-3,
-            epochs=None,
-            batch_size=512,
-            alphas=np.linspace(1, 10, num=100),
-            std=1,
-            p=0.5
-        ),
-        
-        "experiment21": generate_vae_config(
-            data_dim=256,
-            latent_dim=1,
-            std_grad=False,
-            max_iter=4500,
-            lr=3e-3,
-            epochs=None,
-            batch_size=256,
-            alphas=np.linspace(1, 10, num=100),
-            std=1,
-            p=0.5
-        ),
-        
-        "experiment22": generate_vae_config(
-            data_dim=128,
-            latent_dim=1,
-            std_grad=False,
-            max_iter=4500,
-            lr=3e-3,
-            epochs=None,
-            batch_size=128,
-            alphas=np.linspace(1, 10, num=100),
-            std=1,
-            p=0.5
-        ),
-        
-        "alpha: 30": {
-            "data_dim": 1024,
-            "latent_dim": 1,
-            "std_grad": False,
-            "lr": 3e-4,
-            "epochs": [3],
-            "batch_size": 512,
-            "alphas": [30],
-            "std": 1,
-            "p": 0.5,
-            "d": 32,
-        },
-    },
+vae_configs = {
+    "vae.v1": generate_vae_config(
+        data_dim=1024,
+        latent_dim=1,
+        std_grad=False,
+        max_iter=4500,
+        lr=3e-3,
+        epochs=None,
+        batch_size=512,
+        alphas=np.linspace(1, 10, num=100),
+        std=1,
+        p=0.5,
+        seeds=[13, 26, 39, 666, 777, 1313, 2021, 6666, 7777, 9999]
+    ),
 }

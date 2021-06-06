@@ -104,14 +104,14 @@ class RAMP_VAE_gaus_ez(RAMP_bipartite):
         self.sigma_v = torch.zeros(data_dim)
         
     def _fu_in(self, a, b):
-        numerator = self.p*torch.exp(b - a/2) - (1 - self.p)*torch.exp(-b - a/2)
-        denominator = self.p*torch.exp(b - a/2) + (1 - self.p)*torch.exp(-b - a/2)
-        res = numerator / denominator
+        numerator = 2 * (self.p - 1)
+        denominator = (torch.exp(2 * b) - 1)*self.p + 1
+        res = numerator / denominator + 1
         return res
     
     def _fv_in(self, a, b):
-        if torch.any(a+1 <= 0):
-            raise ValueError("It is not possible to compute fv_in!")
+        # if torch.any(a+1 <= 0):
+        #     raise ValueError("It is not possible to compute fv_in!")
         res = b / (a+1)
         return res
     
@@ -151,42 +151,47 @@ class RAMP_VAE_gaus_ez(RAMP_bipartite):
         return 1/(self.av+1)
     
     def fit(
-        self, y, *, lambda_=1, max_iter=1000, eps=1e-7, 
+        self, y, *, lambda_=1, max_iter=100, eps=1e-5, 
         logger=None, u_true=None, v_true=None 
     ):
-        error = 100
+        errors = {}
+        errors["error"] = 100
         s = y
         r = y**2 - 1
         i = 0
         
         cos = nn.CosineSimilarity(dim=0)
         
-        while error > eps and i < max_iter:
+        while errors["error"] > eps and i < max_iter:
             i += 1
             logs = {}
             
-            error = self.step(s, r, lambda_=lambda_)
-            logs["Low-RAMP error"] = error
+            errors["error"] = self.step(s, r, lambda_=lambda_)
+            logs["Low-RAMP error"] = errors["error"]
             if v_true is not None:
                 cos_dist_v = abs(cos(self.v, v_true))
-                l2_dist_v = min(torch.norm(self.v-v_true), torch.norm(self.v+v_true))
-                l2_dist_v /= math.sqrt(self.data_dim)
+                l2_dist_v = min(
+                    torch.linalg.norm(self.v-v_true),
+                    torch.linalg.norm(self.v+v_true)
+                    )
                 
                 logs["Cosine distance V"] = cos_dist_v
-                logs["l2 distance V"] = l2_dist_v
+                logs["l2_v"] = l2_dist_v
+                errors["cos_v"] = cos_dist_v
+                errors["l2_v"] = l2_dist_v
             if u_true is not None:
                 u_accuracy = torch.mean((u_true==self.u).float())
+                errors["accuracy_u"] = u_accuracy
                 logs["Accuracy U"] = u_accuracy
             
             if logger is not None:
                 logger.log(logs)
         
-        return error
+        return errors
             
             
     def step(self, s, r, lambda_=1):
         error = 0
-        pdb.set_trace()
         
         bu_new = self._compute_bu(s, r)
         au_new = self._compute_au(s, r)

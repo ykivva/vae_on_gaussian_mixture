@@ -167,7 +167,7 @@ class DataGeneratorSymmetricStatic(IterableDataset):
         dist_bern = torch.distributions.Bernoulli(self.p)
         self.u = dist_bern.sample((data_size,)).squeeze()
         self.u[self.u==0] = -1
-        y = torch.outer(self.u, self.v)
+        y = torch.outer(self.u, self.v) / self.d
         y += torch.normal(0, self.std, (data_size, self.data_dim))
         return y
             
